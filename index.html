@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>L2F · Logical Region Annotation</title>
+<style>
+:root{--bg:#050a14;--panel:#0a1628;--p2:#0d1e36;--c0:#00d4ff;--c1:#7c3aed;--c2:#10b981;--wlr:#f59e0b;--ws:#3b82f6;--el:#10b981;--tx:#e2e8f0;--mu:#64748b;--bd:rgba(0,212,255,.15)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:Inter,-apple-system,system-ui,sans-serif;line-height:1.6;overflow-x:hidden}
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none}
+.z{position:relative;z-index:1}
+.wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+
+/* hero */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px 24px;position:relative}
+.badge{display:inline-flex;align-items:center;gap:8px;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.25);border-radius:100px;padding:6px 16px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--c0);margin-bottom:32px}
+.badge::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--c0);animation:dot 2s ease infinite}
+@keyframes dot{0%,100%{box-shadow:0 0 0 0 rgba(0,212,255,.4)}50%{box-shadow:0 0 0 6px rgba(0,212,255,0)}}
+h1{font-size:clamp(2.4rem,6vw,4.8rem);font-weight:800;line-height:1.1;letter-spacing:-.03em;margin-bottom:16px}
+.grad{background:linear-gradient(135deg,#00d4ff,#7c3aed 50%,#10b981);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sub{font-size:clamp(1rem,2.5vw,1.2rem);color:var(--mu);max-width:620px;margin:0 auto 48px}
+.stats{display:flex;gap:48px;justify-content:center;flex-wrap:wrap}
+.sv{font-size:2.4rem;font-weight:800;letter-spacing:-.02em;background:linear-gradient(135deg,var(--c0),var(--c1));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.sl{font-size:.75rem;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;margin-top:4px}
+.scroll{position:absolute;bottom:28px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;color:var(--mu);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.sarrow{width:22px;height:38px;border:2px solid rgba(0,212,255,.3);border-radius:11px;display:flex;align-items:flex-start;justify-content:center;padding-top:5px}
+.sdot{width:4px;height:8px;background:var(--c0);border-radius:2px;animation:sd 2s ease infinite}
+@keyframes sd{0%{transform:translateY(0);opacity:1}100%{transform:translateY(13px);opacity:0}}
+
+/* sections */
+.sec{padding:90px 0}
+.sec-tag{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--c0);margin-bottom:14px}
+.sec-tag::before{content:'';display:block;width:22px;height:2px;background:var(--c0)}
+.sec-hd{margin-bottom:56px}
+.sec-h{font-size:clamp(1.6rem,4vw,2.6rem);font-weight:800;letter-spacing:-.03em;line-height:1.15;margin-bottom:14px}
+.sec-p{font-size:1rem;color:var(--mu);max-width:580px;line-height:1.75}
+.appear{opacity:0;transform:translateY(28px);transition:opacity .7s,transform .7s}
+.appear.on{opacity:1;transform:translateY(0)}
+
+/* compare */
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:2px;border-radius:18px;overflow:hidden;margin-bottom:72px}
+.cp{background:var(--panel);padding:36px}
+.cp.prob{border-left:3px solid #ef4444}
+.cp.sol{border-left:3px solid var(--c2)}
+.clabel{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px}
+.clabel.p{color:#ef4444}.clabel.s{color:var(--c2)}
+.cp h3{font-size:1.3rem;font-weight:700;margin-bottom:10px}
+.cp p{color:var(--mu);line-height:1.75;font-size:.9rem}
+.mockbox{margin-top:24px;background:#0d1117;border:1px solid rgba(255,255,255,.06);border-radius:10px;overflow:hidden}
+.mbar{height:30px;background:#161b22;display:flex;align-items:center;gap:5px;padding:0 10px;border-bottom:1px solid rgba(255,255,255,.06)}
+.d{width:9px;height:9px;border-radius:50%}
+.d.r{background:#ff5f57}.d.y{background:#febc2e}.d.g{background:#28c840}
+.mlab{flex:1;text-align:center;font-size:10px;color:#586069}
+
+/* strategy cards */
+.sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-bottom:72px}
+.sc{background:var(--panel);border:1px solid var(--bd);border-radius:18px;padding:28px;position:relative;overflow:hidden;transition:transform .3s,box-shadow .3s}
+.sc:hover{transform:translateY(-4px);box-shadow:0 20px 56px rgba(0,0,0,.4)}
+.sc::after{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.sc.wlr::after{background:linear-gradient(90deg,var(--wlr),transparent)}
+.sc.wslr::after{background:linear-gradient(90deg,var(--ws),transparent)}
+.sc.elr::after{background:linear-gradient(90deg,var(--el),transparent)}
+.sbadge{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:10px;font-size:.95rem;font-weight:900;margin-bottom:16px}
+.wlr .sbadge{background:rgba(245,158,11,.12);color:var(--wlr);border:1px solid rgba(245,158,11,.25)}
+.wslr .sbadge{background:rgba(59,130,246,.12);color:var(--ws);border:1px solid rgba(59,130,246,.25)}
+.elr .sbadge{background:rgba(16,185,129,.12);color:var(--el);border:1px solid rgba(16,185,129,.25)}
+.sc h3{font-size:1rem;font-weight:700;margin-bottom:6px}
+.ssub{font-size:.75rem;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px}
+.sc>p{font-size:.85rem;color:var(--mu);line-height:1.7;margin-bottom:18px}
+.srules{list-style:none;display:flex;flex-direction:column;gap:7px}
+.srules li{display:flex;align-items:flex-start;gap:9px;font-size:.82rem;line-height:1.5;opacity:.85}
+.ri{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;margin-top:1px}
+.wlr .ri{background:rgba(245,158,11,.15);color:var(--wlr)}
+.wslr .ri{background:rgba(59,130,246,.15);color:var(--ws)}
+.elr .ri{background:rgba(16,185,129,.15);color:var(--el)}
+.svis{margin-bottom:16px;border-radius:8px;overflow:hidden;background:#0d1117;border:1px solid rgba(255,255,255,.05);height:130px}
+
+/* interactive demo */
+.demo-box{background:var(--panel);border:1px solid var(--bd);border-radius:22px;padding:42px;margin-bottom:72px}
+.tabs{display:flex;gap:4px;background:rgba(0,0,0,.3);border-radius:10px;padding:3px;margin-bottom:36px;width:fit-content}
+.tab{padding:9px 22px;border-radius:7px;font-size:.85rem;font-weight:600;cursor:pointer;border:none;background:none;color:var(--mu);transition:all .2s}
+.tab:hover{color:var(--tx)}
+.tab.on{background:var(--p2);color:var(--tx);box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.tab.on.tw{color:var(--wlr)}.tab.on.ts{color:var(--ws)}.tab.on.te{color:var(--el)}
+.dc{display:none;grid-template-columns:1fr 1fr;gap:36px;align-items:start}
+.dc.on{display:grid}
+.dscene{background:#0a0f1a;border:1px solid rgba(255,255,255,.06);border-radius:14px;overflow:hidden}
+.dtbar{height:34px;background:#0d1117;display:flex;align-items:center;gap:7px;padding:0 14px;border-bottom:1px solid rgba(255,255,255,.06)}
+.dtlabel{flex:1;text-align:center;font-size:10px;color:#586069}
+.ibox{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.06);border-radius:9px;padding:12px 14px;margin-bottom:16px}
+.itag{font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--c0);margin-bottom:5px}
+.itxt{font-size:.9rem;font-style:italic}
+.dets{display:flex;flex-direction:column;gap:10px}
+.dit{display:flex;align-items:flex-start;gap:11px;font-size:.85rem;line-height:1.6;padding:11px;background:rgba(0,0,0,.2);border-radius:8px}
+.dic{width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;background:rgba(255,255,255,.04)}
+.dtt{font-weight:600;margin-bottom:2px}
+.dtd{color:var(--mu)}
+.brow{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
+.b{display:inline-flex;align-items:center;padding:3px 11px;border-radius:100px;font-size:10px;font-weight:600;letter-spacing:.04em}
+.b.w{background:rgba(245,158,11,.1);color:var(--wlr);border:1px solid rgba(245,158,11,.25)}
+.b.s{background:rgba(59,130,246,.1);color:var(--ws);border:1px solid rgba(59,130,246,.25)}
+.b.e{background:rgba(16,185,129,.1);color:var(--el);border:1px solid rgba(16,185,129,.25)}
+.b.n{background:rgba(0,212,255,.08);color:var(--c0);border:1px solid rgba(0,212,255,.2)}
+
+/* size chart */
+.sbox{background:var(--panel);border:1px solid var(--bd);border-radius:18px;padding:36px;margin-bottom:72px}
+.scale{display:flex;align-items:flex-end;gap:18px;height:150px;padding-bottom:38px;margin-top:28px;position:relative}
+.scale::after{content:'';position:absolute;bottom:30px;left:0;right:0;height:1px;background:rgba(255,255,255,.05)}
+.sbar{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1}
+.sf{width:100%;border-radius:5px 5px 0 0;position:relative}
+.sf::after{content:attr(data-v);position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:700;white-space:nowrap}
+.sl2{font-size:10px;font-weight:600;letter-spacing:.03em;color:var(--mu);text-align:center}
+.ss{font-size:8px;color:var(--mu);opacity:.6;text-align:center}
+.code{font-family:'JetBrains Mono','Fira Code',monospace;font-size:.87rem;color:var(--c0);background:rgba(0,212,255,.05);padding:12px 16px;border-radius:8px;border:1px solid rgba(0,212,255,.1);line-height:1.8}
+.gdiv{height:1px;background:linear-gradient(90deg,transparent,rgba(0,212,255,.3),transparent);margin:32px 0}
+
+/* distribution */
+.dbox{background:var(--panel);border:1px solid var(--bd);border-radius:18px;padding:36px;margin-bottom:72px}
+.dchart{display:flex;align-items:center;gap:36px;margin-top:28px;flex-wrap:wrap}
+.donut-c{position:relative;flex-shrink:0;width:190px;height:190px}
+.donut-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.dtot{font-size:1.9rem;font-weight:800;letter-spacing:-.03em;background:linear-gradient(135deg,var(--c0),var(--c1));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.dleg{flex:1;min-width:200px;display:flex;flex-direction:column;gap:14px}
+.li{display:flex;align-items:center;gap:11px}
+.lc{width:11px;height:11px;border-radius:3px;flex-shrink:0}
+.lt{flex:1}
+.ln{font-size:.88rem;font-weight:600}
+.lp{font-size:.78rem;color:var(--mu)}
+.lbb{flex:2;height:5px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden}
+.lbf{height:100%;border-radius:3px}
+
+/* quality */
+.qgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-bottom:72px}
+.qc{background:var(--panel);border:1px solid var(--bd);border-radius:14px;padding:24px;display:flex;gap:18px;align-items:flex-start;transition:border-color .2s,transform .2s}
+.qc:hover{border-color:rgba(0,212,255,.3);transform:translateY(-2px)}
+.qi{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;background:rgba(0,212,255,.08);border:1px solid rgba(0,212,255,.15)}
+.qc h4{font-size:.95rem;font-weight:700;margin-bottom:6px}
+.qc p{font-size:.83rem;color:var(--mu);line-height:1.65}
+
+/* accordion */
+.acc{display:flex;flex-direction:column;gap:10px;margin-bottom:72px}
+.ai{background:var(--panel);border:1px solid var(--bd);border-radius:14px;overflow:hidden;transition:border-color .2s}
+.ai.open{border-color:rgba(0,212,255,.3)}
+.ah{display:flex;align-items:center;gap:14px;padding:18px 22px;cursor:pointer;user-select:none}
+.atb{display:inline-flex;align-items:center;padding:4px 9px;border-radius:5px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;flex-shrink:0}
+.at{flex:1;font-weight:600;font-size:.9rem}
+.ach{width:18px;height:18px;display:flex;align-items:center;justify-content:center;color:var(--mu);transition:transform .2s}
+.ai.open .ach{transform:rotate(180deg)}
+.ab{max-height:0;overflow:hidden;transition:max-height .4s ease}
+.ai.open .ab{max-height:700px}
+.acon{padding:0 22px 22px;display:flex;flex-direction:column;gap:10px}
+.rc{display:flex;gap:14px;align-items:flex-start;padding:12px 14px;background:rgba(0,0,0,.2);border-radius:9px}
+.rn{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0}
+.rt{font-size:.85rem;line-height:1.65;opacity:.88}
+
+/* results */
+.rbox{background:var(--panel);border:1px solid var(--bd);border-radius:22px;padding:44px;margin-bottom:72px;position:relative;overflow:hidden}
+.rbox::before{content:'';position:absolute;bottom:-80px;left:-80px;width:360px;height:360px;background:radial-gradient(circle,rgba(16,185,129,.05),transparent 70%);pointer-events:none}
+.rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:36px}
+.rcard{background:rgba(0,0,0,.3);border-radius:14px;padding:24px;text-align:center;position:relative;overflow:hidden}
+.rcard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.rcard.p::before{background:linear-gradient(90deg,var(--c0),transparent)}
+.rcard.q::before{background:linear-gradient(90deg,var(--c1),transparent)}
+.rcard.r::before{background:linear-gradient(90deg,var(--c2),transparent)}
+.rnum{font-size:2.6rem;font-weight:800;letter-spacing:-.04em;line-height:1;margin-bottom:5px}
+.rcard.p .rnum{color:var(--c0)}.rcard.q .rnum{color:var(--c1)}.rcard.r .rnum{color:var(--c2)}
+.rdel{font-size:.85rem;font-weight:600;color:var(--c2);margin-bottom:10px}
+.rdesc{font-size:.8rem;color:var(--mu);line-height:1.6}
+
+/* flow */
+.flow{display:flex;gap:0;margin-top:44px}
+.fs{flex:1;padding-right:20px}
+.fn{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1rem;font-weight:800;margin-bottom:16px}
+.fs:nth-child(1) .fn{background:rgba(0,212,255,.1);border:2px solid rgba(0,212,255,.3);color:var(--c0)}
+.fs:nth-child(2) .fn{background:rgba(124,58,237,.1);border:2px solid rgba(124,58,237,.3);color:var(--c1)}
+.fs:nth-child(3) .fn{background:rgba(245,158,11,.1);border:2px solid rgba(245,158,11,.3);color:var(--wlr)}
+.fs:nth-child(4) .fn{background:rgba(16,185,129,.1);border:2px solid rgba(16,185,129,.3);color:var(--c2)}
+.fs h4{font-size:.95rem;font-weight:700;margin-bottom:7px}
+.fs p{font-size:.83rem;color:var(--mu);line-height:1.65}
+
+/* footer */
+.footer{border-top:1px solid rgba(255,255,255,.05);padding:44px 0;text-align:center;color:var(--mu);font-size:.85rem}
+
+@media(max-width:880px){
+  .cmp,.sgrid,.dc,.rgrid,.qgrid,.flow{grid-template-columns:1fr;flex-direction:column}
+  .dchart{flex-direction:column}
+}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+
+<!-- HERO -->
+<section class="hero z">
+<div class="wrap">
+  <div class="badge">ECCV 2026 · Paper #4825</div>
+  <h1><span class="grad">L2F</span>: Logical Region<br>Annotation Strategy</h1>
+  <p class="sub">A semantically-guided framework teaching GUI agents to perceive interfaces the way humans do — through functionally coherent, window-aware logical regions.</p>
+  <div class="stats">
+    <div><div class="sv">13K</div><div class="sl">Annotated Samples</div></div>
+    <div><div class="sv">3</div><div class="sl">Annotation Levels</div></div>
+    <div><div class="sv">+21.82%</div><div class="sl">Max Absolute Gain</div></div>
+    <div><div class="sv">50.86%</div><div class="sl">E2E Acc. (SS-Pro)</div></div>
+  </div>
+  <div class="scroll"><span>Explore Annotation</span><div class="sarrow"><div class="sdot"></div></div></div>
+</div>
+</section>
+
+<!-- COMPARE -->
+<section class="sec z">
+<div class="wrap">
+  <div class="sec-hd appear">
+    <div class="sec-tag">The Challenge</div>
+    <h2 class="sec-h">Why Traditional Cropping Fails</h2>
+    <p class="sec-p">Conventional cropping treats GUI as a flat pixel grid. When multiple similar elements exist across overlapping windows, models get hopelessly confused.</p>
+  </div>
+  <div class="cmp appear">
+    <div class="cp prob">
+      <div class="clabel p">❌ Traditional Local Cropping</div>
+      <h3>Spatial Proximity Only</h3>
+      <p>Fixed box centered on target coordinates. Ignores window semantics. Captures close-icons from 3 different apps simultaneously.</p>
+      <div class="mockbox">
+        <div class="mbar"><div class="d r"></div><div class="d y"></div><div class="d g"></div><div class="mlab">Multi-Window Desktop</div></div>
+        <svg width="100%" height="190" viewBox="0 0 460 190"><rect width="460" height="190" fill="#0d1117"/>
+          <rect x="18" y="10" width="190" height="165" rx="6" fill="#1a2030" stroke="rgba(255,255,255,.08)"/>
+          <rect x="18" y="10" width="190" height="21" rx="6" fill="#22304a"/>
+          <text x="68" y="24" fill="#8892a4" font-size="9" font-family="Inter,system-ui">File Explorer</text>
+          <circle cx="197" cy="20" r="5" fill="#ff5f57" opacity=".8"/>
+          <rect x="240" y="18" width="205" height="155" rx="6" fill="#1a2030" stroke="rgba(255,255,255,.08)"/>
+          <rect x="240" y="18" width="205" height="21" rx="6" fill="#22304a"/>
+          <text x="292" y="32" fill="#8892a4" font-size="9" font-family="Inter,system-ui">Chrome Browser</text>
+          <circle cx="435" cy="28" r="5" fill="#ff5f57" opacity=".8"/>
+          <rect x="95" y="88" width="195" height="92" rx="6" fill="#1a2030" stroke="rgba(255,255,255,.08)"/>
+          <rect x="95" y="88" width="195" height="21" rx="6" fill="#22304a"/>
+          <text x="147" y="102" fill="#8892a4" font-size="9" font-family="Inter,system-ui">Text Editor</text>
+          <circle cx="280" cy="98" r="5" fill="#ff5f57" opacity=".8"/>
+          <circle cx="197" cy="20" r="8" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="3,2"/>
+          <circle cx="435" cy="28" r="8" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="3,2"/>
+          <circle cx="280" cy="98" r="8" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="3,2"/>
+          <rect x="128" y="66" width="120" height="100" rx="4" fill="rgba(59,130,246,.06)" stroke="#3b82f6" stroke-width="2"/>
+          <text x="131" y="62" fill="#3b82f6" font-size="9" font-weight="700" font-family="Inter,system-ui">Local Region</text>
+          <text x="145" y="126" fill="#ef4444" font-size="9" font-family="Inter,system-ui">3 × Close 😕</text>
+        </svg>
+      </div>
+    </div>
+    <div class="cp sol">
+      <div class="clabel s">✅ Logical Region (WLR)</div>
+      <h3>Semantically Coherent</h3>
+      <p>Annotates the entire File Explorer window. Rich context, zero cross-window ambiguity. Exactly how a human would narrow their attention.</p>
+      <div class="mockbox">
+        <div class="mbar"><div class="d r"></div><div class="d y"></div><div class="d g"></div><div class="mlab">Multi-Window Desktop</div></div>
+        <svg width="100%" height="190" viewBox="0 0 460 190"><rect width="460" height="190" fill="#0d1117"/>
+          <rect x="18" y="10" width="190" height="165" rx="6" fill="#111826" stroke="rgba(255,255,255,.03)" opacity=".4"/>
+          <rect x="18" y="10" width="190" height="21" rx="6" fill="#1a2535" opacity=".4"/>
+          <text x="68" y="24" fill="#374151" font-size="9" font-family="Inter,system-ui">File Explorer</text>
+          <rect x="240" y="18" width="205" height="155" rx="6" fill="#1a2535" stroke="rgba(255,255,255,.1)"/>
+          <rect x="240" y="18" width="205" height="21" rx="6" fill="#22304a"/>
+          <text x="292" y="32" fill="#8892a4" font-size="9" font-family="Inter,system-ui">Chrome Browser</text>
+          <circle cx="435" cy="28" r="5" fill="#ff5f57" opacity=".85"/>
+          <rect x="95" y="88" width="195" height="92" rx="6" fill="#111826" stroke="rgba(255,255,255,.03)" opacity=".4"/>
+          <rect x="95" y="88" width="195" height="21" rx="6" fill="#1a2535" opacity=".4"/>
+          <text x="147" y="102" fill="#374151" font-size="9" font-family="Inter,system-ui">Text Editor</text>
+          <rect x="234" y="12" width="217" height="167" rx="8" fill="rgba(245,158,11,.05)" stroke="#f59e0b" stroke-width="2.5"/>
+          <rect x="234" y="2" width="112" height="14" rx="4" fill="#f59e0b"/>
+          <text x="240" y="12" fill="#0a0f1a" font-size="8" font-weight="700" font-family="Inter,system-ui">WLR · Logical Region</text>
+          <circle cx="435" cy="28" r="8" fill="none" stroke="#10b981" stroke-width="2"/>
+          <circle cx="435" cy="28" r="3" fill="#10b981"/>
+          <text x="410" y="46" fill="#10b981" font-size="9" font-family="Inter,system-ui">1×Close ✓</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- THREE STRATEGIES -->
+<section class="sec z" style="background:linear-gradient(180deg,transparent,rgba(0,212,255,.018) 50%,transparent)">
+<div class="wrap">
+  <div class="sec-hd appear">
+    <div class="sec-tag">Annotation System</div>
+    <h2 class="sec-h">Three-Level Annotation Strategy</h2>
+    <p class="sec-p">L2F covers every GUI type through three complementary levels. Distribution: <strong style="color:var(--wlr)">WLR ≈ 50%</strong> · <strong style="color:var(--ws)">WSLR ≈ 40%</strong> · <strong style="color:var(--el)">ELR ≈ 10%</strong></p>
+  </div>
+  <div class="sgrid appear">
+
+    <!-- WLR -->
+    <div class="sc wlr">
+      <div class="sbadge">WLR</div>
+      <h3>Window-Level Logical Region</h3>
+      <div class="ssub">Multi-window environments</div>
+      <div class="svis">
+        <svg width="100%" height="130" viewBox="0 0 270 130"><rect width="270" height="130" fill="#0a0f1a"/>
+          <rect x="10" y="18" width="115" height="96" rx="5" fill="#141e2f" stroke="rgba(255,255,255,.05)"/><rect x="10" y="18" width="115" height="17" rx="5" fill="#1c2c42"/><text x="32" y="30" fill="#4b5563" font-size="8" font-family="Inter,system-ui">App A</text><circle cx="116" cy="26" r="4" fill="#ff5f57" opacity=".3"/>
+          <rect x="96" y="33" width="115" height="88" rx="5" fill="#141e2f" stroke="rgba(255,255,255,.05)"/><rect x="96" y="33" width="115" height="17" rx="5" fill="#1c2c42"/><text x="118" y="45" fill="#4b5563" font-size="8" font-family="Inter,system-ui">App B</text><circle cx="202" cy="41" r="4" fill="#ff5f57" opacity=".3"/>
+          <rect x="52" y="8" width="165" height="114" rx="5" fill="#1a2535" stroke="rgba(255,255,255,.1)"/><rect x="52" y="8" width="165" height="17" rx="5" fill="#213045"/>
+          <text x="74" y="20" fill="#94a3b8" font-size="8" font-family="Inter,system-ui">File Explorer (Target)</text>
+          <circle cx="207" cy="17" r="4" fill="#ff5f57" opacity=".9"/>
+          <rect x="62" y="30" width="65" height="4" rx="2" fill="rgba(255,255,255,.06)"/><rect x="62" y="42" width="85" height="4" rx="2" fill="rgba(255,255,255,.04)"/><rect x="62" y="54" width="55" height="4" rx="2" fill="rgba(255,255,255,.04)"/>
+          <rect x="48" y="4" width="173" height="122" rx="7" fill="rgba(245,158,11,.06)" stroke="#f59e0b" stroke-width="2"/>
+          <rect x="48" y="122" width="56" height="11" rx="3" fill="#f59e0b"/><text x="53" y="130" fill="#0a0f1a" font-size="7.5" font-weight="700" font-family="Inter,system-ui">WLR</text>
+          <circle cx="207" cy="17" r="6" fill="none" stroke="#10b981" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <p>For multi-window desktops: identify the specific application window containing the target, annotate that window's entire boundary.</p>
+      <ul class="srules">
+        <li><div class="ri">①</div>Locate the window containing the target</li>
+        <li><div class="ri">②</div>If window &gt; 600×600: sub-divide within it</li>
+        <li><div class="ri">③</div>Occluded window → annotate full visible portion</li>
+        <li><div class="ri">④</div>Small window → expand, avoid contrast boundaries</li>
+      </ul>
+    </div>
+
+    <!-- WSLR -->
+    <div class="sc wslr">
+      <div class="sbadge">WSLR</div>
+      <h3>Workspace-Level Logical Region</h3>
+      <div class="ssub">Single-window multi-panel</div>
+      <div class="svis">
+        <svg width="100%" height="130" viewBox="0 0 270 130"><rect width="270" height="130" fill="#0d1117"/>
+          <rect x="0" y="0" width="27" height="130" fill="#111827"/>
+          <rect x="27" y="0" width="68" height="105" fill="#111827"/>
+          <text x="33" y="13" fill="#6b7280" font-size="6.5" font-weight="700" font-family="Inter,system-ui">EXPLORER</text>
+          <text x="33" y="28" fill="#4b5563" font-size="7.5" font-family="Inter,system-ui">▶ src</text>
+          <text x="41" y="40" fill="#4b5563" font-size="7.5" font-family="Inter,system-ui">main.py</text>
+          <rect x="95" y="0" width="175" height="15" fill="#1a2535"/>
+          <text x="100" y="10" fill="#4b5563" font-size="7" font-family="Inter,system-ui">File  Edit  Run  Terminal</text>
+          <rect x="95" y="15" width="175" height="15" fill="#161f30"/>
+          <rect x="95" y="15" width="90" height="15" fill="#0d1117"/>
+          <text x="100" y="26" fill="#94a3b8" font-size="7.5" font-family="Inter,system-ui">main.py  ×</text>
+          <rect x="95" y="30" width="175" height="100" fill="#0d1117"/>
+          <text x="105" y="46" fill="#569cd6" font-size="7" font-family="monospace">import numpy as np</text>
+          <text x="105" y="60" fill="#6a9955" font-size="7" font-family="monospace"># training loop</text>
+          <text x="105" y="74" fill="#dcdcaa" font-size="7" font-family="monospace">def train(model):</text>
+          <rect x="160" y="2" width="38" height="11" rx="3" fill="rgba(0,122,204,.25)" stroke="rgba(0,122,204,.5)" stroke-width="1"/>
+          <text x="164" y="10" fill="#9cdcfe" font-size="7" font-family="Inter,system-ui">▶ Debug</text>
+          <rect x="93" y="28" width="177" height="102" rx="3" fill="rgba(59,130,246,.06)" stroke="#3b82f6" stroke-width="2"/>
+          <rect x="93" y="126" width="68" height="11" rx="3" fill="#3b82f6"/>
+          <text x="98" y="134" fill="#fff" font-size="7.5" font-weight="700" font-family="Inter,system-ui">WSLR</text>
+          <circle cx="179" cy="7" r="5" fill="none" stroke="#10b981" stroke-width="1.5"/>
+          <circle cx="179" cy="7" r="2" fill="#10b981"/>
+        </svg>
+      </div>
+      <p>For single-window apps: segment functional panels, annotate the workspace region containing the target task point.</p>
+      <ul class="srules">
+        <li><div class="ri">①</div>Identify all functional panels within the window</li>
+        <li><div class="ri">②</div>Panel &lt; 600×600: expand away from unrelated areas</li>
+        <li><div class="ri">③</div>Strong color-contrast boundary → don't cross it</li>
+        <li><div class="ri">④</div>Elongated panel → proportional expansion</li>
+      </ul>
+    </div>
+
+    <!-- ELR -->
+    <div class="sc elr">
+      <div class="sbadge">ELR</div>
+      <h3>Element-Level Logical Region</h3>
+      <div class="ssub">Simple / sparse interfaces</div>
+      <div class="svis">
+        <svg width="100%" height="130" viewBox="0 0 270 130"><rect width="270" height="130" fill="#0a0f1a"/>
+          <rect x="75" y="4" width="120" height="122" rx="12" fill="#141e2f" stroke="rgba(255,255,255,.07)"/>
+          <rect x="75" y="4" width="120" height="18" rx="12" fill="#1a2535"/>
+          <text x="87" y="16" fill="#6b7280" font-size="7">9:41  ▲▲▲  🔋</text>
+          <text x="94" y="38" fill="#e2e8f0" font-size="13" font-weight="700" font-family="Inter,system-ui">Alarms</text>
+          <rect x="83" y="45" width="104" height="20" rx="5" fill="#1c2c42" opacity=".5"/>
+          <text x="91" y="58" fill="#6b7280" font-size="11" font-weight="700" font-family="Inter,system-ui">6:00</text>
+          <rect x="163" y="51" width="14" height="8" rx="4" fill="#374151"/>
+          <rect x="83" y="70" width="104" height="24" rx="5" fill="#1c2d45"/>
+          <text x="91" y="84" fill="#e2e8f0" font-size="13" font-weight="700" font-family="Inter,system-ui">4:30 PM</text>
+          <rect x="163" y="77" width="14" height="8" rx="4" fill="#f59e0b"/>
+          <circle cx="172" cy="81" r="3.5" fill="#fff"/>
+          <rect x="83" y="100" width="104" height="20" rx="5" fill="#1c2c42" opacity=".4"/>
+          <text x="91" y="113" fill="#6b7280" font-size="11" font-weight="700" font-family="Inter,system-ui">7:30</text>
+          <rect x="80" y="67" width="110" height="30" rx="6" fill="rgba(16,185,129,.07)" stroke="#10b981" stroke-width="2"/>
+          <rect x="80" y="93" width="48" height="10" rx="3" fill="#10b981"/>
+          <text x="85" y="101" fill="#0a0f1a" font-size="7.5" font-weight="700" font-family="Inter,system-ui">ELR</text>
+          <circle cx="170" cy="81" r="6" fill="none" stroke="#10b981" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <p>For simple, sparse interfaces with no distinct workspace subdivisions. Centers the target, minimizes distracting context.</p>
+      <ul class="srules">
+        <li><div class="ri">①</div>No distinct panels: annotate around the target directly</li>
+        <li><div class="ri">②</div>Center the target within the region</li>
+        <li><div class="ri">③</div>Minimize inclusion of unrelated elements</li>
+        <li><div class="ri">④</div>Semantically guided, not just spatially proximate</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+</section>
+
+<!-- INTERACTIVE DEMO -->
+<section class="sec z" style="background:linear-gradient(180deg,transparent,rgba(124,58,237,.025) 50%,transparent)">
+<div class="wrap">
+  <div class="sec-hd appear">
+    <div class="sec-tag">Interactive Walkthrough</div>
+    <h2 class="sec-h">Annotation in Practice</h2>
+    <p class="sec-p">Step through concrete examples for each annotation strategy with detailed decision rationale.</p>
+  </div>
+  <div class="demo-box appear">
+    <div class="tabs">
+      <button class="tab on tw" onclick="switchTab('wlr')">WLR · Window</button>
+      <button class="tab ts" onclick="switchTab('wslr')">WSLR · Workspace</button>
+      <button class="tab te" onclick="switchTab('elr')">ELR · Element</button>
+    </div>
+
+    <!-- WLR -->
+    <div class="dc on" id="demo-wlr">
+      <div class="dscene">
+        <div class="dtbar"><div class="d r"></div><div class="d y"></div><div class="d g"></div><div class="dtlabel">Desktop</div></div>
+        <svg width="100%" height="280" viewBox="0 0 430 280"><rect width="430" height="280" fill="#0a0f1a"/>
+          <rect x="10" y="18" width="148" height="228" rx="6" fill="#111827" stroke="rgba(255,255,255,.04)" opacity=".5"/>
+          <rect x="10" y="18" width="148" height="19" rx="6" fill="#1a2535" opacity=".5"/>
+          <text x="38" y="30" fill="#374151" font-size="8.5" font-family="Inter,system-ui">Settings</text>
+          <rect x="232" y="46" width="182" height="186" rx="6" fill="#111827" stroke="rgba(255,255,255,.04)" opacity=".5"/>
+          <rect x="232" y="46" width="182" height="19" rx="6" fill="#1a2535" opacity=".5"/>
+          <text x="260" y="58" fill="#374151" font-size="8.5" font-family="Inter,system-ui">Finder</text>
+          <!-- WPS window -->
+          <rect x="85" y="9" width="248" height="262" rx="7" fill="#141e30" stroke="rgba(255,255,255,.1)"/>
+          <rect x="85" y="9" width="248" height="21" rx="7" fill="#1c2d45"/>
+          <text x="140" y="23" fill="#94a3b8" font-size="8.5" font-family="Inter,system-ui">WPS Office — report.docx</text>
+          <circle cx="322" cy="19" r="4.5" fill="#ff5f57" opacity=".9"/>
+          <rect x="93" y="30" width="232" height="17" fill="#162030"/>
+          <text x="99" y="42" fill="#4b5563" font-size="7">File  Edit  View  Insert  Format  Review</text>
+          <rect x="128" y="32" width="18" height="13" rx="2" fill="rgba(255,255,255,.06)"/>
+          <text x="129" y="42" fill="#94a3b8" font-size="9.5">💾</text>
+          <rect x="93" y="47" width="232" height="214" fill="#0d1520"/>
+          <rect x="104" y="59" width="175" height="7" rx="2" fill="rgba(255,255,255,.07)"/>
+          <rect x="104" y="73" width="155" height="5" rx="2" fill="rgba(255,255,255,.04)"/>
+          <rect x="104" y="85" width="195" height="5" rx="2" fill="rgba(255,255,255,.04)"/>
+          <!-- WLR box -->
+          <rect x="80" y="4" width="258" height="272" rx="9" fill="rgba(245,158,11,.05)" stroke="#f59e0b" stroke-width="2.5"/>
+          <rect x="80" y="272" width="115" height="13" rx="4" fill="#f59e0b"/>
+          <text x="86" y="282" fill="#0a0f1a" font-size="8" font-weight="700" font-family="Inter,system-ui">WLR Logical Region</text>
+          <!-- Target -->
+          <rect x="126" y="31" width="22" height="15" rx="3" fill="none" stroke="#10b981" stroke-width="2"/>
+          <circle cx="137" cy="39" r="3.5" fill="#10b981"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brow"><span class="b w">WLR</span><span class="b n">Multi-Window</span><span class="b n">Case ①</span></div>
+        <div class="ibox"><div class="itag">Task Instruction</div><div class="itxt">"Save the file that is open in WPS."</div></div>
+        <div class="dets">
+          <div class="dit"><div class="dic">🎯</div><div><div class="dtt">Target Element</div><div class="dtd">The Save button (💾) in the WPS toolbar — a small icon that visually overlaps with toolbar regions of other windows.</div></div></div>
+          <div class="dit"><div class="dic">🟡</div><div><div class="dtt">WLR Decision</div><div class="dtd">Three windows overlap. Annotator identifies WPS Office as the target app. The entire WPS window boundary is the logical region — it's &gt;600×600 and provides unambiguous application context.</div></div></div>
+          <div class="dit"><div class="dic">💡</div><div><div class="dtt">Why Not Local Crop?</div><div class="dtd">A tight crop around the toolbar would capture save icons from all three applications. Window-level context removes all ambiguity.</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WSLR -->
+    <div class="dc" id="demo-wslr">
+      <div class="dscene">
+        <div class="dtbar"><div class="d r"></div><div class="d y"></div><div class="d g"></div><div class="dtlabel">VSCode</div></div>
+        <svg width="100%" height="280" viewBox="0 0 430 280"><rect width="430" height="280" fill="#0d1117"/>
+          <rect x="0" y="0" width="30" height="280" fill="#111827"/>
+          <text x="6" y="24" fill="#4b5563" font-size="11">⬛</text><text x="6" y="52" fill="#4b5563" font-size="11">🔍</text><text x="6" y="80" fill="#4b5563" font-size="11">⎇</text><text x="6" y="108" fill="#4b5563" font-size="11">🐛</text>
+          <rect x="30" y="0" width="94" height="234" fill="#111827"/>
+          <text x="36" y="15" fill="#6b7280" font-size="7" font-weight="700" font-family="Inter,system-ui">EXPLORER</text>
+          <text x="36" y="32" fill="#4b5563" font-size="8" font-family="Inter,system-ui">▶ src</text>
+          <text x="44" y="46" fill="#94a3b8" font-size="8" font-family="Inter,system-ui">main.py</text>
+          <text x="44" y="60" fill="#4b5563" font-size="8" font-family="Inter,system-ui">utils.py</text>
+          <text x="36" y="76" fill="#4b5563" font-size="8" font-family="Inter,system-ui">▶ tests</text>
+          <rect x="124" y="0" width="306" height="17" fill="#1a2535"/>
+          <text x="130" y="11" fill="#6b7280" font-size="7">File   Edit   View   Go   Run   Terminal   Help</text>
+          <rect x="124" y="17" width="306" height="19" fill="#161f30"/>
+          <rect x="124" y="17" width="98" height="19" fill="#0d1117"/>
+          <text x="130" y="30" fill="#94a3b8" font-size="8" font-family="Inter,system-ui">main.py  ×</text>
+          <rect x="124" y="36" width="306" height="184" fill="#0d1117"/>
+          <rect x="124" y="36" width="26" height="184" fill="#0a0e18"/>
+          <text x="128" y="52" fill="#374151" font-size="7" font-family="monospace">1</text>
+          <text x="128" y="68" fill="#374151" font-size="7" font-family="monospace">2</text>
+          <text x="128" y="84" fill="#374151" font-size="7" font-family="monospace">3</text>
+          <text x="154" y="52" fill="#569cd6" font-size="7.5" font-family="monospace">import </text>
+          <text x="193" y="52" fill="#9cdcfe" font-size="7.5" font-family="monospace">numpy as np</text>
+          <text x="154" y="68" fill="#6a9955" font-size="7.5" font-family="monospace"># training loop</text>
+          <text x="154" y="84" fill="#dcdcaa" font-size="7.5" font-family="monospace">def train(model):</text>
+          <rect x="0" y="234" width="430" height="20" fill="#007acc"/>
+          <text x="8" y="246" fill="rgba(255,255,255,.8)" font-size="7.5" font-family="Inter,system-ui">⎇ main  ·  Python 3.10  ·  Ln 1</text>
+          <rect x="272" y="1" width="42" height="13" rx="3" fill="rgba(0,122,204,.25)" stroke="rgba(0,122,204,.5)" stroke-width="1"/>
+          <text x="277" y="11" fill="#9cdcfe" font-size="7.5" font-family="Inter,system-ui">▶ Debug</text>
+          <!-- WSLR box: editor workspace -->
+          <rect x="122" y="34" width="310" height="188" rx="4" fill="rgba(59,130,246,.05)" stroke="#3b82f6" stroke-width="2.5"/>
+          <rect x="122" y="218" width="124" height="13" rx="4" fill="#3b82f6"/>
+          <text x="128" y="228" fill="#fff" font-size="8" font-weight="700" font-family="Inter,system-ui">WSLR Logical Region</text>
+          <circle cx="293" cy="7" r="6.5" fill="none" stroke="#10b981" stroke-width="1.5"/>
+          <circle cx="293" cy="7" r="2.5" fill="#10b981"/>
+        </svg>
+      </div>
+      <div>
+        <div class="brow"><span class="b s">WSLR</span><span class="b n">Single Window</span><span class="b n">Multi-Panel</span></div>
+        <div class="ibox"><div class="itag">Task Instruction</div><div class="itxt">"Debug the current file in VSCode."</div></div>
+        <div class="dets">
+          <div class="dit"><div class="dic">🎯</div><div><div class="dtt">Target Element</div><div class="dtd">The "▶ Debug" button in VSCode's top menu bar.</div></div></div>
+          <div class="dit"><div class="dic">🔵</div><div><div class="dtt">WSLR Decision</div><div class="dtd">VSCode is one window with distinct functional panels: activity bar, file sidebar, menu/tab bar, editor area, status bar. The Debug button is in the toolbar. WSLR selects the editor+toolbar area as the main workspace — the toolbar strip alone is far too narrow (&lt;600px), so it expands into the code editor area.</div></div></div>
+          <div class="dit"><div class="dic">📐</div><div><div class="dtt">Boundary Rule Applied</div><div class="dtd">Expands downward into the editor but stops at the strongly-colored status bar (#007acc) — a clear visual contrast boundary that should not be crossed.</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ELR -->
+    <div class="dc" id="demo-elr">
+      <div class="dscene">
+        <div class="dtbar"><div class="d r"></div><div class="d y"></div><div class="d g"></div><div class="dtlabel">Clock App</div></div>
+        <svg width="100%" height="280" viewBox="0 0 430 280"><rect width="430" height="280" fill="#0a0f1a"/>
+          <rect x="125" y="10" width="180" height="260" rx="18" fill="#111827" stroke="rgba(255,255,255,.07)"/>
+          <rect x="125" y="10" width="180" height="24" rx="18" fill="#141e2f"/>
+          <text x="137" y="25" fill="#6b7280" font-size="8">9:41   ▲▲▲▲   🔋 86%</text>
+          <text x="164" y="56" fill="#e2e8f0" font-size="16" font-weight="700" font-family="Inter,system-ui">Alarms</text>
+          <text x="288" y="56" fill="#3b82f6" font-size="16">＋</text>
+          <rect x="133" y="62" width="164" height="0.5" fill="rgba(255,255,255,.05)"/>
+          <rect x="133" y="66" width="164" height="36" rx="8" fill="#1c2c42" opacity=".5"/>
+          <text x="143" y="82" fill="#6b7280" font-size="14" font-weight="700" font-family="Inter,system-ui">6:00</text>
+          <text x="143" y="95" fill="#4b5563" font-size="7.5" font-family="Inter,system-ui">Mon–Fri  ·  Wake up</text>
+          <rect x="275" y="75" width="16" height="10" rx="5" fill="#374151"/>
+          <!-- 4:30 PM - target -->
+          <rect x="133" y="108" width="164" height="42" rx="8" fill="#1c2d45"/>
+          <text x="143" y="126" fill="#e2e8f0" font-size="16" font-weight="700" font-family="Inter,system-ui">4:30 <tspan font-size="10" fill="#94a3b8">PM</tspan></text>
+          <text x="143" y="141" fill="#6b7280" font-size="7.5" font-family="Inter,system-ui">Daily  ·  Exercise reminder</text>
+          <rect x="275" y="119" width="16" height="10" rx="5" fill="#f59e0b"/>
+          <circle cx="286" cy="124" r="4" fill="#fff"/>
+          <rect x="133" y="156" width="164" height="36" rx="8" fill="#1c2c42" opacity=".5"/>
+          <text x="143" y="172" fill="#6b7280" font-size="14" font-weight="700" font-family="Inter,system-ui">7:30</text>
+          <text x="143" y="185" fill="#4b5563" font-size="7.5" font-family="Inter,system-ui">Weekend only</text>
+          <rect x="275" y="165" width="16" height="10" rx="5" fill="#374151"/>
+          <rect x="133" y="198" width="164" height="34" rx="8" fill="#1c2c42" opacity=".4"/>
+          <text x="143" y="215" fill="#6b7280" font-size="13" font-weight="700" font-family="Inter,system-ui">9:00 PM</text>
+          <!-- ELR box -->
+          <rect x="129" y="104" width="172" height="50" rx="8" fill="rgba(16,185,129,.07)" stroke="#10b981" stroke-width="2.5"/>
+          <rect x="129" y="150" width="96" height="13" rx="4" fill="#10b981"/>
+          <text x="135" y="160" fill="#0a0f1a" font-size="8" font-weight="700" font-family="Inter,system-ui">ELR Logical Region</text>
+          <circle cx="284" cy="124" r="8" fill="none" stroke="#10b981" stroke-width="2"/>
+          <line x1="308" y1="124" x2="360" y2="124" stroke="rgba(16,185,129,.4)" stroke-dasharray="4,2"/>
+          <text x="346" y="120" fill="#10b981" font-size="8" font-family="Inter,system-ui">Toggle</text>
+          <text x="346" y="132" fill="#6b7280" font-size="7" font-family="Inter,system-ui">(target)</text>
+        </svg>
+      </div>
+      <div>
+        <div class="brow"><span class="b e">ELR</span><span class="b n">Simple Interface</span><span class="b n">Sparse</span></div>
+        <div class="ibox"><div class="itag">Task Instruction</div><div class="itxt">"Turn off the clock alarm at 4:30 PM."</div></div>
+        <div class="dets">
+          <div class="dit"><div class="dic">🎯</div><div><div class="dtt">Target Element</div><div class="dtd">The toggle switch for the 4:30 PM alarm, currently in "ON" state.</div></div></div>
+          <div class="dit"><div class="dic">🟢</div><div><div class="dtt">ELR Decision</div><div class="dtd">Clock app is a simple list with no distinct functional panels. No window boundaries or workspace subdivisions apply. ELR draws a tight box around the 4:30 PM alarm row, centering the toggle and excluding adjacent alarms from context.</div></div></div>
+          <div class="dit"><div class="dic">⚡</div><div><div class="dtt">ELR vs WSLR Distinction</div><div class="dtd">Unlike VSCode's complex panel structure, this list has uniform item separation — no meaningful functional subdivision. ELR directly isolates the target list item, matching human visual attention to the specific alarm.</div></div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</section>
+
+<!-- SIZE CONSTRAINT -->
+<section class="sec z">
+<div class="wrap">
+  <div class="sec-hd appear">
+    <div class="sec-tag">Design Constraint</div>
+    <h2 class="sec-h">Region Size: 600×600 → 1024×1024 px</h2>
+    <p class="sec-p">Ablation confirms 784×784 as the optimal crop size. The Regional-Constraint Reward R_C encodes this directly into RL training.</p>
+  </div>
+  <div class="sbox appear">
+    <div class="scale">
+      <div class="sbar"><div class="sf" style="height:42%;background:linear-gradient(180deg,rgba(239,68,68,.6),rgba(239,68,68,.25))" data-v="32.81%"></div><div class="sl2">512×512</div><div class="ss">Below min</div></div>
+      <div class="sbar"><div class="sf" style="height:51%;background:linear-gradient(180deg,rgba(245,158,11,.7),rgba(245,158,11,.3))" data-v="36.68%"></div><div class="sl2">600×600</div><div class="ss">Min bound</div></div>
+      <div class="sbar"><div class="sf" style="height:100%;background:linear-gradient(180deg,#10b981,rgba(16,185,129,.4));box-shadow:0 0 18px rgba(16,185,129,.3)" data-v="38.77% ★"></div><div class="sl2">784×784</div><div class="ss">Optimal ⭐</div></div>
+      <div class="sbar"><div class="sf" style="height:95%;background:linear-gradient(180deg,rgba(0,212,255,.7),rgba(0,212,255,.3))" data-v="36.49%"></div><div class="sl2">1024×1024</div><div class="ss">Max bound</div></div>
+      <div class="sbar"><div class="sf" style="height:40%;background:linear-gradient(180deg,rgba(239,68,68,.45),rgba(239,68,68,.15))" data-v="31.37%"></div><div class="sl2">1600×1600</div><div class="ss">Exceeds max</div></div>
+    </div>
+    <p style="text-align:center;font-size:.78rem;color:var(--mu);margin-top:6px;">Avg. accuracy (%) on ScreenSpot-Pro by region crop size · S<sub>ideal</sub> = 784×784 = 614,656 px</p>
+    <div class="gdiv"></div>
+    <div style="display:flex;gap:28px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:220px;padding:18px;background:rgba(0,0,0,.2);border-radius:10px;">
+        <div style="font-size:.72rem;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;margin-bottom:9px;">Regional-Constraint Reward R<sub>C</sub></div>
+        <div class="code">R_C = exp( −(S_pred − S_ideal)² / 2(Λ₀ · S_ideal)² )</div>
+        <p style="font-size:.78rem;color:var(--mu);margin-top:9px;line-height:1.65;">Gaussian penalty. Λ₀ = 0.25. Reward → 1 when predicted area ≈ S<sub>ideal</sub>; decays exponentially as deviation grows.</p>
+      </div>
+      <div style="flex:1;min-width:220px;padding:18px;background:rgba(0,0,0,.2);border-radius:10px;">
+        <div style="font-size:.72rem;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;margin-bottom:9px;">Why Constraints Matter</div>
+        <p style="font-size:.78rem;color:var(--mu);line-height:1.65;">Without area constraints, models exploit trivial strategies — predicting the whole image as "logical region" satisfies inclusion rewards without providing grounding benefit. The Gaussian penalty forces genuinely focused region predictions.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- DISTRIBUTION -->
+<section class="sec z">
+<div class="wrap">
+  <div class="sec-hd appear">
+    <div class="sec-tag">Dataset Composition</div>
+    <h2 class="sec-h">Annotation Distribution &amp; Data Quality</h2>
+  </div>
+  <div class="dbox appear">
+    <div class="dchart">
+      <div class="donut-c">
+        <svg width="190" height="190" viewBox="0 0 190 190">
+          <circle cx="95" cy="95" r="70" fill="none" stroke="#0d1e36" stroke-width="26"/>
+          <circle cx="95" cy="95" r="70" fill="none" stroke="#f59e0b" stroke-width="26" stroke-dasharray="219.9 439.8" stroke-dashoffset="0" transform="rotate(-90 95 95)"/>
+          <circle cx="95" cy="95" r="70" fill="none" stroke="#3b82f6" stroke-width="26" stroke-dasharray="175.9 439.8" stroke-dashoffset="-219.9" transform="rotate(-90 95 95)"/>
+          <circle cx="95" cy="95" r="70" fill="none" stroke="#10b981" stroke-width="26" stroke-dasharray="44.0 439.8" stroke-dashoffset="-395.8" transform="rotate(-90 95 95)"/>
+        </svg>
+        <div class="donut-center"><div class="dtot">13K</div><div style="font-size:10px;color:var(--mu);text-transform:uppercase;letter-spacing:.06em">Samples</div></div>
+      </div>
+      <div class="dleg">
+        <div class="li"><div class="lc" style="background:#f59e0b"></div><div class="lt"><div class="ln">WLR · Window-Level</div><div class="lp">≈ 50% · Multi-window desktops</div></div><div class="lbb"><div class="lbf" style="width:50%;background:#f59e0b"></div></div></div>
+        <div class="li"><div class="lc" style="background:#3b82f6"></div><div class="lt"><div class="ln">WSLR · Workspace-Level</div><div class="lp">≈ 40% · Single-window multi-panel apps</div></div><div class="lbb"><div class="lbf" style="width:40%;background:#3b82f6"></div></div></div>
+        <div class="li"><div class="lc" style="background:#10b981"></div><div class="lt"><div class="ln">ELR · Element-Level</div><div class="lp">≈ 10% · Simple / sparse interfaces</div></div><div class="lbb"><div class="lbf" style="width:10%;background:#10b981"></div></div></div>
+        <div class="gdiv" style="margin:6px 0"></div>
+        <p style="font-size:.8rem;color:var(--mu);line-height:1.65;"><strong style="color:var(--tx)">Low-repetition:</strong> Only 2.4 instructions per unique screenshot vs ~50 in comparable datasets. Each training iteration exposes a distinct visual layout.</p>
+        <p style="font-size:.8rem;color:var(--mu);line-height:1.65;margin-top:8px;"><strong style="color:var(--tx)">Uniform spatial distribution:</strong> Task targets spread uniformly across all screen regions — unlike UI-Vision (80% upper-left), OS-ATLAS, ShowUI which concentrate in top portions.</p>
+      </div>
+    </div>
+  </div>
+  <div class="qgrid appear">
+    <div class="qc"><div class="qi">🖥️</div><div><h4>High-Resolution Priority</h4><p>Min 1280×720. Most samples at 2880×1800, some at 3360×2100. Specifically designed for high-resolution grounding challenges.</p></div></div>
+    <div class="qc"><div class="qi">🔁</div><div><h4>Low Repetition Rate</h4><p>2.4 instructions/screenshot vs ~50 in others. Maximizes visual diversity per training step, preventing memorization of specific layouts.</p></div></div>
+    <div class="qc"><div class="qi">📐</div><div><h4>Uniform Spatial Distribution</h4><p>Rigorous filtering ensures task points are evenly distributed across the full screen space. Prevents positional bias toward UI hotspots.</p></div></div>
+    <div class="qc"><div class="qi">🎯</div><div><h4>Icon-Heavy Composition</h4><p>Icon-to-text ratio ≈ 1:2. Intentionally elevated icon proportion strengthens symbolic visual reasoning — critical for professional software.</p></div></div>
+  </div>
+</div>
+</section>
+
+<!-- ANNOTATOR FLOW -->
+<section class="sec z" style="background:linear-gradient(180deg,transparent,rgba(0,212,255,.018) 50%,transparent)">
+<div class="wrap">
+  <div class="sec-hd appear">
+    <div class="sec-tag">Annotation Pipeline</div>
+    <h2 class="sec-h">Annotator Decision Flow</h2>
+  </div>
+  <div class="flow appear">
+    <div class="fs"><div class="fn">1</div><h4>Interface Assessment</h4><p>Multi-window desktop? Single-window app? Sparse interface? Count windows and functional areas.</p></div>
+    <div class="fs"><div class="fn">2</div><h4>Level Selection</h4><p>Multi-window → WLR. Single-window + distinct panels → WSLR. Sparse / no panels → ELR.</p></div>
+    <div class="fs"><div class="fn">3</div><h4>Bounding Box</h4><p>Draw box containing the target. Verify: must include target point. Check: ≥600×600 px, ≤1024×1024 px.</p></div>
+    <div class="fs"><div class="fn">4</div><h4>Adjustment Rules</h4><p>Too small? Expand carefully. Elongated? Balance proportions. Strong visual boundary? Don't cross it.</p></div>
+  </div>
+  <div class="gdiv" style="margin-top:60px"></div>
+</div>
+</section>
+
+<!-- EDGE CASES ACCORDION -->
+<section class="sec z">
+<div class="wrap">
+  <div class="sec-hd appear">
+    <div class="sec-tag">Edge Cases</div>
+    <h2 class="sec-h">Fine-Grained Annotation Rules</h2>
+    <p class="sec-p">Nuanced decision logic distinguishing high-quality L2F annotations from arbitrary bounding boxes.</p>
+  </div>
+  <div class="acc appear">
+
+    <div class="ai open" id="aw">
+      <div class="ah" onclick="toggle('aw')">
+        <span class="atb" style="background:rgba(245,158,11,.1);color:var(--wlr);border:1px solid rgba(245,158,11,.25)">WLR</span>
+        <span class="at">Window-Level — 4 Special Cases</span>
+        <span class="ach"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 4.5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+      </div>
+      <div class="ab"><div class="acon">
+        <div class="rc"><div class="rn" style="background:rgba(245,158,11,.12);color:var(--wlr)">①</div><div class="rt"><strong>Occluded window:</strong> Target in a partially-hidden window → annotate the entire visible portion. Preserves window-level context even when partially hidden by another window.</div></div>
+        <div class="rc"><div class="rn" style="background:rgba(245,158,11,.12);color:var(--wlr)">②</div><div class="rt"><strong>Large independent window (&gt;600×600):</strong> Apply WLR-style decomposition inside — identify functional sub-regions within it and annotate the most relevant sub-area rather than the entire window.</div></div>
+        <div class="rc"><div class="rn" style="background:rgba(245,158,11,.12);color:var(--wlr)">③</div><div class="rt"><strong>Decomposable but size-limited window:</strong> Further cropping would lose essential context → retain the full window as the logical region even if sub-regions can be identified.</div></div>
+        <div class="rc"><div class="rn" style="background:rgba(245,158,11,.12);color:var(--wlr)">④</div><div class="rt"><strong>Too-small window (expand required):</strong> May expand slightly for ≥600×600 compliance. <em>Exception:</em> if expansion crosses a visually distinct boundary (e.g., sharp color discontinuity like the white-to-dark-pink transition in Fig. 2 example 4), retain original window — avoid introducing irrelevant content.</div></div>
+      </div></div>
+    </div>
+
+    <div class="ai" id="as">
+      <div class="ah" onclick="toggle('as')">
+        <span class="atb" style="background:rgba(59,130,246,.1);color:var(--ws);border:1px solid rgba(59,130,246,.25)">WSLR</span>
+        <span class="at">Workspace-Level — 3 Adjustment Rules</span>
+        <span class="ach"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 4.5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+      </div>
+      <div class="ab"><div class="acon">
+        <div class="rc"><div class="rn" style="background:rgba(59,130,246,.12);color:var(--ws)">①</div><div class="rt"><strong>Elongated workspace:</strong> Narrow strips bias the model toward directional reasoning. Extend the bounding box toward the direction with fewer distractors to achieve a more balanced aspect ratio.</div></div>
+        <div class="rc"><div class="rn" style="background:rgba(59,130,246,.12);color:var(--ws)">②</div><div class="rt"><strong>Expansion constrained by image boundary:</strong> When the image edge limits expansion direction, prioritize a clean, well-defined region edge. Avoid expanding into visually complex or cluttered neighboring areas.</div></div>
+        <div class="rc"><div class="rn" style="background:rgba(59,130,246,.12);color:var(--ws)">③</div><div class="rt"><strong>Small workspace with low visual contrast:</strong> When the sub-region blends visually with surroundings, moderately expand the bounding box to enhance contextual consistency and improve downstream detection robustness.</div></div>
+      </div></div>
+    </div>
+
+    <div class="ai" id="ae">
+      <div class="ah" onclick="toggle('ae')">
+        <span class="atb" style="background:rgba(16,185,129,.1);color:var(--el);border:1px solid rgba(16,185,129,.25)">ELR</span>
+        <span class="at">Element-Level — Core Principles</span>
+        <span class="ach"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 4.5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+      </div>
+      <div class="ab"><div class="acon">
+        <div class="rc"><div class="rn" style="background:rgba(16,185,129,.12);color:var(--el)">①</div><div class="rt"><strong>Minimize surrounding interference:</strong> ELR prioritizes reducing interference from adjacent elements. The target point should be well-centered within the annotated region.</div></div>
+        <div class="rc"><div class="rn" style="background:rgba(16,185,129,.12);color:var(--el)">②</div><div class="rt"><strong>Focused, uncluttered context:</strong> Unlike WLR/WSLR which preserve broader functional context, ELR tightly frames the target element itself as the entire logical focus region.</div></div>
+        <div class="rc"><div class="rn" style="background:rgba(16,185,129,.12);color:var(--el)">③</div><div class="rt"><strong>When to use ELR:</strong> (a) Only one functional region exists; (b) Elements are sparse and clearly separated; (c) Interface has already been pre-cropped; (d) Task is equivalent to local grounding due to isolated target placement.</div></div>
+      </div></div>
+    </div>
+
+    <div class="ai" id="ac">
+      <div class="ah" onclick="toggle('ac')">
+        <span class="atb" style="background:rgba(0,212,255,.1);color:var(--c0);border:1px solid rgba(0,212,255,.25)">ALL</span>
+        <span class="at">Cross-Level Consistency Rules</span>
+        <span class="ach"><svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2.5 4.5l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+      </div>
+      <div class="ab"><div class="acon">
+        <div class="rc"><div class="rn" style="background:rgba(0,212,255,.1);color:var(--c0)">📏</div><div class="rt"><strong>Size bounds (hard constraint):</strong> All logical region boxes: 600×600 ≤ box ≤ 1024×1024 pixels. Empirically validated range providing sufficient context while maintaining discriminability.</div></div>
+        <div class="rc"><div class="rn" style="background:rgba(0,212,255,.1);color:var(--c0)">🎯</div><div class="rt"><strong>Containment guarantee (hard constraint):</strong> The logical region must always contain the ground-truth target point. Enforced by annotation guidelines AND the Logic-Consistency Reward R_ℓ during RL training.</div></div>
+        <div class="rc"><div class="rn" style="background:rgba(0,212,255,.1);color:var(--c0)">🧠</div><div class="rt"><strong>Human perceptual alignment:</strong> Every annotation should reflect how a human would identify the relevant functional context before searching for the target — not just geometric proximity.</div></div>
+        <div class="rc"><div class="rn" style="background:rgba(0,212,255,.1);color:var(--c0)">📊</div><div class="rt"><strong>Icon-text balance in region:</strong> Annotations follow a ~1:2 icon-to-text ratio in task targets, intentionally raising icon proportion to strengthen symbolic visual reasoning in the trained model.</div></div>
+      </div></div>
+    </div>
+
+  </div>
+</div>
+</section>
+
+<!-- RESULTS -->
+<section class="sec z" style="background:linear-gradient(180deg,transparent,rgba(16,185,129,.02) 50%,transparent)">
+<div class="wrap">
+  <div class="sec-hd appear">
+    <div class="sec-tag">Experimental Results</div>
+    <h2 class="sec-h">Annotation Quality → Model Performance</h2>
+    <p class="sec-p">L2F-trained models consistently outperform state-of-the-art baselines across all benchmarks and complexity levels.</p>
+  </div>
+  <div class="rbox appear">
+    <div class="rgrid">
+      <div class="rcard p">
+        <div class="rnum">+21.82%</div>
+        <div class="rdel">↑ absolute gain</div>
+        <div class="rdesc">Maximum improvement of CogAgent-24 baseline on ScreenSpot-Pro when enhanced with P-LR plug-in model</div>
+      </div>
+      <div class="rcard q">
+        <div class="rnum">50.86%</div>
+        <div class="rdel">E2E-GG-7B overall</div>
+        <div class="rdesc">End-to-end model accuracy on ScreenSpot-Pro — surpassing prior SOTA with 89.6% relative gain over Qwen2.5-VL-7B baseline</div>
+      </div>
+      <div class="rcard r">
+        <div class="rnum">+12.95%</div>
+        <div class="rdel">avg. absolute gain</div>
+        <div class="rdesc">Average improvement across all tested baseline models on ScreenSpot-Pro when enhanced with the P-LR plug-in</div>
+      </div>
+    </div>
+    <div class="gdiv"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <div style="padding:18px;background:rgba(0,0,0,.2);border-radius:10px;">
+        <div style="font-size:.75rem;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Two Model Paradigms</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:center;gap:10px;font-size:.85rem;">
+            <span style="background:rgba(0,212,255,.1);color:var(--c0);border:1px solid rgba(0,212,255,.2);padding:3px 10px;border-radius:6px;font-size:10px;font-weight:700;flex-shrink:0">P-LR</span>
+            <span style="color:var(--mu)">Plug-in detection model — preprocesses screenshots by predicting logical region before passing to any downstream grounding model</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;font-size:.85rem;">
+            <span style="background:rgba(124,58,237,.1);color:var(--c1);border:1px solid rgba(124,58,237,.2);padding:3px 10px;border-radius:6px;font-size:10px;font-weight:700;flex-shrink:0">E2E-GG</span>
+            <span style="color:var(--mu)">End-to-end model — jointly predicts logical region and target point in a single forward pass using Logic-Progressive Prompt Strategy</span>
+          </div>
+        </div>
+      </div>
+      <div style="padding:18px;background:rgba(0,0,0,.2);border-radius:10px;">
+        <div style="font-size:.75rem;color:var(--mu);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px;">Reward Function Design</div>
+        <div class="code" style="font-size:.78rem;line-height:1.9;">
+          R_total = R_ℓ · R_iou + w_C · R_C + w_p · R_p<br>
+          R_ℓ: containment (target ∈ predicted box)<br>
+          R_iou: region overlap with ground truth<br>
+          R_C: area size constraint (Gaussian)<br>
+          R_p: task-point accuracy (E2E only)
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer z">
+<div class="wrap">
+  <p>L2F: Learning to Focus on Logical Regions for High-Resolution GUI Grounding</p>
+  <p style="margin-top:8px;opacity:.5">Anonymous ECCV 2026 Submission · Paper #4825</p>
+</div>
+</footer>
+
+<script>
+// Starfield
+const C=document.getElementById('bg');const ctx=C.getContext('2d');let W,H,stars=[];
+function resize(){W=C.width=window.innerWidth;H=C.height=window.innerHeight}
+function init(){resize();stars=[];for(let i=0;i<180;i++){stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*.8+.1,a:Math.random(),s:Math.random()*.003+.001})}}
+function draw(){ctx.clearRect(0,0,W,H);ctx.fillStyle='#050a14';ctx.fillRect(0,0,W,H);
+stars.forEach(s=>{s.a+=s.s;if(s.a>1)s.s=-s.s;if(s.a<0)s.s=-s.s;ctx.globalAlpha=Math.max(0,Math.min(1,s.a));ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill()});ctx.globalAlpha=1;requestAnimationFrame(draw)}
+window.addEventListener('resize',()=>{resize();init()});init();draw();
+
+// Tab switching
+function switchTab(t){
+  document.querySelectorAll('.dc').forEach(d=>d.classList.remove('on'));
+  document.getElementById('demo-'+t).classList.add('on');
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+  const map={wlr:'tw',wslr:'ts',elr:'te'};
+  document.querySelectorAll('.tab').forEach(b=>{
+    if((t==='wlr'&&b.classList.contains('tw'))||(t==='wslr'&&b.classList.contains('ts'))||(t==='elr'&&b.classList.contains('te'))){b.classList.add('on')}
+  });
+}
+
+// Accordion
+function toggle(id){
+  const el=document.getElementById(id);
+  const isOpen=el.classList.contains('open');
+  document.querySelectorAll('.ai').forEach(a=>a.classList.remove('open'));
+  if(!isOpen)el.classList.add('open');
+}
+
+// Scroll appear
+const obs=new IntersectionObserver((entries)=>{entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('on')})},{threshold:0.1});
+document.querySelectorAll('.appear').forEach(el=>obs.observe(el));
+</script>
+</body>
+</html>
