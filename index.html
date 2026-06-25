@@ -806,7 +806,7 @@ window.addEventListener('load', function() {
     const fe = sharedWins[0];
     const dotX = fe.cx - 30, dotY = fe.cy + 30;
     const BW = BAD_BW, BH = BAD_BH;
-    const DUR=[45,55,60,70];
+    const DUR=[90,110,120,140];
     let phase=0, pT=0;
     function animBad(){
       ctx.clearRect(0,0,W,H);
@@ -892,7 +892,7 @@ window.addEventListener('load', function() {
     const ctx=goodC.getContext('2d');
     const fe = sharedWins[0];
     const WLR_X=fe.x-4, WLR_Y=fe.y-4, WLR_W=fe.w+8, WLR_H=fe.h+8;
-    const DUR=[45,55,55,70];
+    const DUR=[90,110,110,140];
     let phase=0, pT=0;
     function animGood(){
       ctx.clearRect(0,0,W,H);
@@ -1275,7 +1275,7 @@ window.addEventListener('load', function() {
         }
       },
 
-    ], [45, 90, 110]);
+    ], [90, 180, 220]);
 
     /* ── WSLR: Install GitLens in VSCode Extensions ── */
     registerAnno('img-wslr', [
@@ -1427,7 +1427,7 @@ window.addEventListener('load', function() {
         }
       },
 
-    ], [45, 90, 110]);
+    ], [90, 180, 220]);
 
     /* ── ELR: Turn off 4:30pm alarm ── */
     registerAnno('img-elr', [
@@ -1568,7 +1568,7 @@ window.addEventListener('load', function() {
         }
       },
 
-    ], [45, 90, 110]);
+    ], [90, 180, 220]);
 
   })();
 
