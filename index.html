@@ -723,8 +723,9 @@ h1{font-size:clamp(2.4rem,6vw,4.8rem);font-weight:800;line-height:1.1;letter-spa
 const C=document.getElementById('bg');const ctx=C.getContext('2d');let W,H,stars=[];
 function resize(){W=C.width=window.innerWidth;H=C.height=window.innerHeight}
 function init(){resize();stars=[];for(let i=0;i<180;i++){stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*.8+.1,a:Math.random(),s:Math.random()*.003+.001})}}
-function draw(){ctx.clearRect(0,0,W,H);ctx.fillStyle='#050a14';ctx.fillRect(0,0,W,H);
-stars.forEach(s=>{s.a+=s.s;if(s.a>1)s.s=-s.s;if(s.a<0)s.s=-s.s;ctx.globalAlpha=Math.max(0,Math.min(1,s.a));ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill()});ctx.globalAlpha=1;requestAnimationFrame(draw)}
+let _starLastT=0;
+function draw(now){if(!now)now=performance.now();const dt=Math.min((now-_starLastT)/16.667,3);_starLastT=now;ctx.clearRect(0,0,W,H);ctx.fillStyle='#050a14';ctx.fillRect(0,0,W,H);
+stars.forEach(s=>{s.a+=s.s*dt;if(s.a>1)s.s=-s.s;if(s.a<0)s.s=-s.s;ctx.globalAlpha=Math.max(0,Math.min(1,s.a));ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill()});ctx.globalAlpha=1;requestAnimationFrame(draw)}
 window.addEventListener('resize',()=>{resize();init()});init();draw();
 
 // Tab switching
@@ -777,6 +778,7 @@ window.addEventListener('load', function() {
     makeWin(58,  125, 188, 110, 'Text Editor'),
   ];
   const BAD_BW=240, BAD_BH=130;
+  // DUR values are now in MILLISECONDS (time-based, display-rate independent)
 
   function drawWins(ctx, wins, dimOthers, tgtIdx){
     ctx.globalAlpha=1;
@@ -806,13 +808,16 @@ window.addEventListener('load', function() {
     const fe = sharedWins[0];
     const dotX = fe.cx - 30, dotY = fe.cy + 30;
     const BW = BAD_BW, BH = BAD_BH;
-    const DUR=[90,110,120,140];
-    let phase=0, pT=0;
-    function animBad(){
+    const DUR=[1100,1350,1480,1720]; // ms
+    let phase=0, pT=0, _badLastT=0;
+    function animBad(now){
+      if(!now)now=performance.now();
+      const dt=Math.min(now-_badLastT,50);_badLastT=now;
+      pT+=dt;
       ctx.clearRect(0,0,W,H);
       ctx.fillStyle='#0a0f1a'; ctx.fillRect(0,0,W,H);
       drawWins(ctx, sharedWins, false, -1);
-      const prog = pT/DUR[phase];
+      const prog = Math.min(pT/DUR[phase],1);
       function easeOut(p){return 1-Math.pow(1-Math.min(p,1),3);}
       if(phase===0){
         // coarse crosshair moving to approximate area
@@ -850,7 +855,7 @@ window.addEventListener('load', function() {
         ctx.fillStyle='#f59e0b'; ctx.font='bold 9px Inter,system-ui';
         ctx.fillText('Local bbox — bbox too large', bx+4, Math.max(by-3,8));
         // pulse close btns inside bbox
-        const pulse=0.5+Math.sin(pT*0.15)*0.5;
+        const pulse=0.5+Math.sin(pT*0.009)*0.5;
         sharedWins.forEach(w=>{
           const inside = w.cx>=bx&&w.cx<=bx+BW&&w.cy>=by&&w.cy<=by+BH;
           if(inside){
@@ -880,7 +885,7 @@ window.addEventListener('load', function() {
         });
         ctx.fillStyle='#f59e0b'; ctx.beginPath(); ctx.arc(dotX,dotY,4,0,Math.PI*2); ctx.fill();
       }
-      pT++; if(pT>=DUR[phase]){phase=(phase+1)%4;pT=0;}
+      if(pT>=DUR[phase]){phase=(phase+1)%4;pT=0;}
       requestAnimationFrame(animBad);
     }
     animBad();
@@ -892,14 +897,17 @@ window.addEventListener('load', function() {
     const ctx=goodC.getContext('2d');
     const fe = sharedWins[0];
     const WLR_X=fe.x-4, WLR_Y=fe.y-4, WLR_W=fe.w+8, WLR_H=fe.h+8;
-    const DUR=[90,110,110,140];
-    let phase=0, pT=0;
-    function animGood(){
+    const DUR=[1100,1350,1350,1720]; // ms
+    let phase=0, pT=0, _goodLastT=0;
+    function animGood(now){
+      if(!now)now=performance.now();
+      const dt=Math.min(now-_goodLastT,50);_goodLastT=now;
+      pT+=dt;
       ctx.clearRect(0,0,W,H);
       ctx.fillStyle='#0a0f1a'; ctx.fillRect(0,0,W,H);
       const dimOthers = phase>=1;
       drawWins(ctx, sharedWins, dimOthers, 0);
-      const prog=pT/DUR[phase];
+      const prog=Math.min(pT/DUR[phase],1);
       function easeOut(p){return 1-Math.pow(1-Math.min(p,1),3);}
       if(phase===0){
         // crosshair scans to FE window
@@ -948,7 +956,7 @@ window.addEventListener('load', function() {
         ctx.fillStyle=sg; ctx.fillRect(fe.x,Math.max(fe.y+18,scanY-10),fe.w,20);
       } else {
         // locked on FE close btn
-        const pulse=Math.sin(pT*0.12)*0.4+0.6;
+        const pulse=Math.sin(pT*0.0072)*0.4+0.6;
         ctx.strokeStyle=`rgba(16,185,129,${pulse})`; ctx.lineWidth=2.5;
         ctx.shadowColor='#10b981'; ctx.shadowBlur=10*pulse;
         rr(ctx,WLR_X,WLR_Y,WLR_W,WLR_H,6,false,true); ctx.shadowBlur=0;
@@ -956,18 +964,18 @@ window.addEventListener('load', function() {
         ctx.fillStyle='#10b981'; rr(ctx,WLR_X,WLR_Y-16,200,16,4,true,false);
         ctx.fillStyle='#0a0f1a'; ctx.font='bold 8.5px Inter,system-ui';
         ctx.fillText('Step 3: 1 × close btn — unambiguous ✓', WLR_X+4, WLR_Y-3);
-        const lp=Math.sin(pT*0.12)*3;
+        const lp=Math.sin(pT*0.0072)*3;
         ctx.strokeStyle='#10b981'; ctx.lineWidth=2;
         ctx.shadowColor='#10b981'; ctx.shadowBlur=8;
         ctx.beginPath(); ctx.arc(fe.cx,fe.cy,10+lp,0,Math.PI*2); ctx.stroke();
         ctx.shadowBlur=0;
         ctx.fillStyle='#10b981'; ctx.beginPath(); ctx.arc(fe.cx,fe.cy,4,0,Math.PI*2); ctx.fill();
-        ctx.globalAlpha=0.65+Math.sin(pT*0.08)*0.35;
+        ctx.globalAlpha=0.65+Math.sin(pT*0.0048)*0.35;
         ctx.fillStyle='#10b981'; ctx.font='bold 9.5px Inter,system-ui';
         ctx.fillText('✓  Correct! — File Explorer close button', WLR_X, WLR_Y+WLR_H+15);
         ctx.globalAlpha=1;
       }
-      pT++; if(pT>=DUR[phase]){phase=(phase+1)%4;pT=0;}
+      if(pT>=DUR[phase]){phase=(phase+1)%4;pT=0;}
       requestAnimationFrame(animGood);
     }
     animGood();
@@ -1014,7 +1022,7 @@ window.addEventListener('load', function() {
       if(animId) cancelAnimationFrame(animId);
 
       const ctx = ocvs.getContext('2d');
-      let phase = 0, pT = 0, t = 0;
+      let phase = 0, pT = 0, t = 0, _olLastT = 0;
 
       function lerp(a,b,p){return a+(b-a)*p;}
       function easeOut(p){return 1-Math.pow(1-Math.min(p,1),3);}
@@ -1026,7 +1034,10 @@ window.addEventListener('load', function() {
         ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
       }
 
-      function tick(){
+      function tick(now){
+        if(!now)now=performance.now();
+        const dt=Math.min(now-_olLastT,50);_olLastT=now;
+        pT+=dt; t+=dt;
         const W=ocvs.width, H=ocvs.height;
         ctx.clearRect(0,0,W,H);
         // Always draw background image first
@@ -1034,9 +1045,7 @@ window.addEventListener('load', function() {
         const prog=Math.min(pT/durations[phase],1);
         const ease=easeOut(prog);
         phases[phase](ctx,prog,ease,t,W,H,rr,lerp);
-        pT++;
         if(pT>=durations[phase]){ phase=(phase+1)%phases.length; pT=0; }
-        t++;
         animId = requestAnimationFrame(tick);
       }
       tick();
@@ -1072,7 +1081,7 @@ window.addEventListener('load', function() {
           ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         }
         resize();
-        let phase=0, pT=0, t=0, raf=null;
+        let phase=0, pT=0, t=0, raf=null, _inLastT=0;
         function lerp(a,b,p){return a+(b-a)*p;}
         function easeOut(p){return 1-Math.pow(1-Math.min(p,1),3);}
         function rr(x,y,w,h,r){
@@ -1082,16 +1091,17 @@ window.addEventListener('load', function() {
           ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
           ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
         }
-        function tick(){
+        function tick(now){
+          if(!now)now=performance.now();
+          const dt=Math.min(now-_inLastT,50);_inLastT=now;
+          pT+=dt; t+=dt;
           const W=cssW, H=cssH;
           ctx.clearRect(0,0,W,H);
           ctx.drawImage(img, 0, 0, W, H);
           const prog=Math.min(pT/durations[phase],1);
           const ease=easeOut(prog);
           phases[phase](ctx,prog,ease,t,W,H,rr,lerp);
-          pT++;
           if(pT>=durations[phase]){ phase=(phase+1)%phases.length; pT=0; }
-          t++;
           raf = requestAnimationFrame(tick);
         }
         tick();
@@ -1170,7 +1180,7 @@ window.addEventListener('load', function() {
           ctx.fillRect(0,tw.y+tw.h,W,H-(tw.y+tw.h));
           ctx.globalAlpha=1;
           // Keep WPS border glowing
-          const pulse=Math.sin(t*0.18)*0.3+0.7;
+          const pulse=Math.sin(t*0.0108)*0.3+0.7;
           ctx.strokeStyle=`rgba(245,158,11,${0.5+da*0.5*pulse})`; ctx.lineWidth=2.5;
           ctx.shadowColor='#f59e0b'; ctx.shadowBlur=10*pulse*da;
           rr(tw.x,tw.y,tw.w,tw.h,4); ctx.stroke();
@@ -1215,7 +1225,7 @@ window.addEventListener('load', function() {
           ctx.setLineDash([]);
 
           // WPS border pulse while scanning
-          const pulse=Math.sin(t*0.15)*0.3+0.7;
+          const pulse=Math.sin(t*0.009)*0.3+0.7;
           ctx.strokeStyle=`rgba(245,158,11,${0.5+pulse*0.3})`; ctx.lineWidth=2;
           ctx.shadowColor='#f59e0b'; ctx.shadowBlur=8;
           rr(tw.x,tw.y,tw.w,tw.h,4); ctx.stroke();
@@ -1227,11 +1237,11 @@ window.addEventListener('load', function() {
           ctx.fillText('在 WPS Office 区域内搜索保存按钮…', W*0.03, H-fs*1.3);
         } else {
           // Lock phase: pulse rings on Save button, green lock box
-          const lp=Math.sin(t*0.14)*2;
-          const pulse=Math.sin(t*0.11)*0.4+0.6;
+          const lp=Math.sin(t*0.0084)*2;
+          const pulse=Math.sin(t*0.0066)*0.4+0.6;
 
           // Outer ring expand + fade
-          const ring2r=20+lp+Math.sin(t*0.07)*5;
+          const ring2r=20+lp+Math.sin(t*0.0042)*5;
           ctx.globalAlpha=(0.4+pulse*0.2);
           ctx.strokeStyle='rgba(16,185,129,0.5)';ctx.lineWidth=1.5;
           ctx.beginPath();ctx.arc(tgtX,tgtY,ring2r,0,Math.PI*2);ctx.stroke();
@@ -1267,7 +1277,7 @@ window.addEventListener('load', function() {
           rr(tw.x,tw.y,tw.w,tw.h,4); ctx.stroke();
 
           const fs=Math.round(W*0.019);
-          ctx.globalAlpha=0.75+Math.sin(t*0.1)*0.25;
+          ctx.globalAlpha=0.75+Math.sin(t*0.006)*0.25;
           ctx.fillStyle='#10b981';
           ctx.font=`bold ${fs}px Inter,sans-serif`;
           ctx.fillText('✓  定位到保存按钮 💾', W*0.03, H-fs*1.3);
@@ -1275,7 +1285,7 @@ window.addEventListener('load', function() {
         }
       },
 
-    ], [90, 180, 220]);
+    ], [1100, 2200, 2700]); // ms
 
     /* ── WSLR: Install GitLens in VSCode Extensions ── */
     registerAnno('img-wslr', [
@@ -1347,7 +1357,7 @@ window.addEventListener('load', function() {
           ctx.fillRect(tp.x+tp.w,tp.y,W-(tp.x+tp.w),tp.h);
           ctx.fillRect(0,tp.y+tp.h,W,H-(tp.y+tp.h));
           ctx.globalAlpha=1;
-          const pulse=Math.sin(t*0.18)*0.3+0.7;
+          const pulse=Math.sin(t*0.0108)*0.3+0.7;
           ctx.strokeStyle=`rgba(245,158,11,${0.5+da*0.5*pulse})`; ctx.lineWidth=2.5;
           ctx.shadowColor='#f59e0b'; ctx.shadowBlur=10*pulse*da;
           rr(tp.x,tp.y,tp.w,tp.h,4); ctx.stroke();
@@ -1385,7 +1395,7 @@ window.addEventListener('load', function() {
           ctx.beginPath();ctx.moveTo(cx2-10,cy2);ctx.lineTo(cx2+10,cy2);ctx.stroke();
           ctx.beginPath();ctx.moveTo(cx2,cy2-10);ctx.lineTo(cx2,cy2+10);ctx.stroke();
           ctx.setLineDash([]);
-          const pulse=Math.sin(t*0.15)*0.3+0.7;
+          const pulse=Math.sin(t*0.009)*0.3+0.7;
           ctx.strokeStyle=`rgba(245,158,11,${0.5+pulse*0.3})`; ctx.lineWidth=2;
           ctx.shadowColor='#f59e0b'; ctx.shadowBlur=8;
           rr(tp.x,tp.y,tp.w,tp.h,4); ctx.stroke();
@@ -1394,11 +1404,11 @@ window.addEventListener('load', function() {
           ctx.fillStyle='rgba(245,158,11,.9)'; ctx.font=`bold ${fs}px Inter,sans-serif`;
           ctx.fillText('在 Extensions 面板内搜索安装按钮 Install…', W*0.03, H-fs*1.3);
         } else {
-          const lp=Math.sin(t*0.14)*2;
-          const pulse=Math.sin(t*0.11)*0.4+0.6;
+          const lp=Math.sin(t*0.0084)*2;
+          const pulse=Math.sin(t*0.0066)*0.4+0.6;
           ctx.globalAlpha=(0.4+pulse*0.2);
           ctx.strokeStyle='rgba(16,185,129,0.5)'; ctx.lineWidth=1.5;
-          ctx.beginPath();ctx.arc(tgtX,tgtY,20+lp+Math.sin(t*0.07)*5,0,Math.PI*2);ctx.stroke();
+          ctx.beginPath();ctx.arc(tgtX,tgtY,20+lp+Math.sin(t*0.0042)*5,0,Math.PI*2);ctx.stroke();
           ctx.globalAlpha=1;
           ctx.strokeStyle=`rgba(16,185,129,${pulse})`; ctx.lineWidth=2.5;
           ctx.shadowColor='#10b981'; ctx.shadowBlur=14*pulse;
@@ -1420,14 +1430,14 @@ window.addEventListener('load', function() {
           ctx.strokeStyle=`rgba(16,185,129,${0.5+pulse*0.3})`; ctx.lineWidth=2;
           rr(tp.x,tp.y,tp.w,tp.h,4); ctx.stroke();
           const fs=Math.round(W*0.019);
-          ctx.globalAlpha=0.75+Math.sin(t*0.1)*0.25;
+          ctx.globalAlpha=0.75+Math.sin(t*0.006)*0.25;
           ctx.fillStyle='#10b981'; ctx.font=`bold ${fs}px Inter,sans-serif`;
           ctx.fillText('✓  定位到安装按钮 Install', W*0.03, H-fs*1.3);
           ctx.globalAlpha=1;
         }
       },
 
-    ], [90, 180, 220]);
+    ], [1100, 2200, 2700]); // ms
 
     /* ── ELR: Turn off 4:30pm alarm ── */
     registerAnno('img-elr', [
@@ -1489,7 +1499,7 @@ window.addEventListener('load', function() {
           ctx.fillRect(box.x+box.w,box.y,W-(box.x+box.w),box.h);
           ctx.fillRect(0,box.y+box.h,W,H-(box.y+box.h));
           ctx.globalAlpha=1;
-          const pulse=Math.sin(t*0.18)*0.3+0.7;
+          const pulse=Math.sin(t*0.0108)*0.3+0.7;
           ctx.strokeStyle=`rgba(245,158,11,${0.5+da*0.5*pulse})`; ctx.lineWidth=2.5;
           ctx.shadowColor='#f59e0b'; ctx.shadowBlur=10*pulse*da;
           rr(box.x,box.y,box.w,box.h,6); ctx.stroke();
@@ -1526,7 +1536,7 @@ window.addEventListener('load', function() {
           ctx.beginPath();ctx.moveTo(cx2-10,cy2);ctx.lineTo(cx2+10,cy2);ctx.stroke();
           ctx.beginPath();ctx.moveTo(cx2,cy2-10);ctx.lineTo(cx2,cy2+10);ctx.stroke();
           ctx.setLineDash([]);
-          const pulse=Math.sin(t*0.15)*0.3+0.7;
+          const pulse=Math.sin(t*0.009)*0.3+0.7;
           ctx.strokeStyle=`rgba(245,158,11,${0.5+pulse*0.3})`; ctx.lineWidth=2;
           ctx.shadowColor='#f59e0b'; ctx.shadowBlur=8;
           rr(tc.x,tc.y,tc.w,tc.h,6); ctx.stroke();
@@ -1535,11 +1545,11 @@ window.addEventListener('load', function() {
           ctx.fillStyle='rgba(245,158,11,.9)'; ctx.font=`bold ${fs}px Inter,sans-serif`;
           ctx.fillText('在 4:30pm 闹钟卡片内搜索开关…', W*0.03, H-fs*1.3);
         } else {
-          const lp=Math.sin(t*0.14)*2;
-          const pulse=Math.sin(t*0.11)*0.4+0.6;
+          const lp=Math.sin(t*0.0084)*2;
+          const pulse=Math.sin(t*0.0066)*0.4+0.6;
           ctx.globalAlpha=(0.4+pulse*0.2);
           ctx.strokeStyle='rgba(16,185,129,0.5)'; ctx.lineWidth=1.5;
-          ctx.beginPath();ctx.arc(tgtX,tgtY,20+lp+Math.sin(t*0.07)*5,0,Math.PI*2);ctx.stroke();
+          ctx.beginPath();ctx.arc(tgtX,tgtY,20+lp+Math.sin(t*0.0042)*5,0,Math.PI*2);ctx.stroke();
           ctx.globalAlpha=1;
           ctx.strokeStyle=`rgba(16,185,129,${pulse})`; ctx.lineWidth=2.5;
           ctx.shadowColor='#10b981'; ctx.shadowBlur=14*pulse;
@@ -1561,14 +1571,14 @@ window.addEventListener('load', function() {
           ctx.strokeStyle=`rgba(16,185,129,${0.5+pulse*0.3})`; ctx.lineWidth=2;
           rr(tc.x,tc.y,tc.w,tc.h,6); ctx.stroke();
           const fs=Math.round(W*0.019);
-          ctx.globalAlpha=0.75+Math.sin(t*0.1)*0.25;
+          ctx.globalAlpha=0.75+Math.sin(t*0.006)*0.25;
           ctx.fillStyle='#10b981'; ctx.font=`bold ${fs}px Inter,sans-serif`;
           ctx.fillText('✓  定位到开关 — 关闭 4:30pm 闹钟', W*0.03, H-fs*1.3);
           ctx.globalAlpha=1;
         }
       },
 
-    ], [90, 180, 220]);
+    ], [1100, 2200, 2700]); // ms
 
   })();
 
@@ -1657,7 +1667,7 @@ function registerCaseAnno(imgId, cvsId, phases, durations, descContainerId, step
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
     resize();
-    var phase=0, pT=0, t=0, lastHStep=-1;
+    var phase=0, pT=0, t=0, lastHStep=-1, _caseLastT=0;
     function lerp(a,b,p){return a+(b-a)*p;}
     function easeOut(p){return 1-Math.pow(1-Math.min(p,1),3);}
     function rr(x,y,w,h,r){
@@ -1680,7 +1690,10 @@ function registerCaseAnno(imgId, cvsId, phases, durations, descContainerId, step
         highlightStep(descContainerId, hStep);
       }
     }
-    function tick(){
+    function tick(now){
+      if(!now)now=performance.now();
+      var dt=Math.min(now-_caseLastT,50);_caseLastT=now;
+      pT+=dt; t+=dt;
       var W=cssW, H=cssH;
       /* No drawImage - canvas is transparent overlay on top of <img> */
       ctx.clearRect(0,0,W,H);
@@ -1688,9 +1701,7 @@ function registerCaseAnno(imgId, cvsId, phases, durations, descContainerId, step
       var ease=easeOut(prog);
       phases[phase](ctx,prog,ease,t,W,H,rr,lerp);
       updateHighlight();
-      pT++;
       if(pT>=durations[phase]){ phase=(phase+1)%phases.length; pT=0; }
-      t++;
       requestAnimationFrame(tick);
     }
     tick();
@@ -1702,8 +1713,8 @@ function registerCaseAnno(imgId, cvsId, phases, durations, descContainerId, step
 
 /* Helper: draw target point (red) with pulse rings */
 function drawTarget(ctx,tx,ty,t){
-  var pulse=Math.sin(t*0.12)*0.4+0.6;
-  var lp=Math.sin(t*0.15)*2;
+  var pulse=Math.sin(t*0.0072)*0.4+0.6;
+  var lp=Math.sin(t*0.009)*2;
   ctx.strokeStyle='rgba(239,68,68,'+pulse+')'; ctx.lineWidth=2.5;
   ctx.shadowColor='#ef4444'; ctx.shadowBlur=14*pulse;
   ctx.beginPath(); ctx.arc(tx,ty,12+lp,0,Math.PI*2); ctx.stroke();
@@ -1761,7 +1772,7 @@ registerCaseAnno('img-wlrc1','cvs-wlrc1',[
     drawYellowBoxFaded(ctx,bx,by,bw,bh,0.5,rr);
     drawTarget(ctx,0.0773*W,0.0931*H,t);
   }
-],[200,200],'wlr-case-1',[0,1]);
+],[1200,1200],'wlr-case-1',[0,1]);
 
 /* ── WLR Case 2: Browser Extensions panel (2880x1800)
    yellow: x=222,y=53 to x=951,y=1722  → 0.0771,0.0294,0.2531,0.9272
@@ -1776,7 +1787,7 @@ registerCaseAnno('img-wlrc2','cvs-wlrc2',[
     drawYellowBoxFaded(ctx,bx,by,bw,bh,0.5,rr);
     drawTarget(ctx,0.3047*W,0.6572*H,t);
   }
-],[200,200],'wlr-case-2',[0,1]);
+],[1200,1200],'wlr-case-2',[0,1]);
 
 /* ── WLR Case 3: Windows Settings panel (2560x1440)
    yellow: x=1548,y=158 to x=2535,y=1309  → 0.6047,0.1097,0.3855,0.7993
@@ -1791,7 +1802,7 @@ registerCaseAnno('img-wlrc3','cvs-wlrc3',[
     drawYellowBoxFaded(ctx,bx,by,bw,bh,0.5,rr);
     drawTarget(ctx,0.6531*W,0.5108*H,t);
   }
-],[200,200],'wlr-case-3',[0,1]);
+],[1200,1200],'wlr-case-3',[0,1]);
 
 /* ── WLR Case 4: Desktop guide (2560x1440)
    yellow: x=787,y=476 to x=1753,y=1168  → 0.3074,0.3306,0.3773,0.4806
@@ -1806,7 +1817,7 @@ registerCaseAnno('img-wlrc4','cvs-wlrc4',[
     drawYellowBoxFaded(ctx,bx,by,bw,bh,0.5,rr);
     drawTarget(ctx,0.6082*W,0.3552*H,t);
   }
-],[200,200],'wlr-case-4',[0,1]);
+],[1200,1200],'wlr-case-4',[0,1]);
 
 /* ── WSLR Case 1: VSCode terminals (2880x1800)
    blue: x=0,y=120 to x=2637,y=1767  → 0.0000,0.0667,0.9156,0.9150
@@ -1840,7 +1851,7 @@ registerCaseAnno('img-wslrc1','cvs-wslrc1',[
     drawYellowBoxFaded(ctx,yx,yy,yw,yh,0.5,rr);
     drawTarget(ctx,0.4958*W,0.7583*H,t);
   }
-],[250,200],'wslr-case-1',[function(p){return p<0.45?0:1;},2]);
+],[1500,1200],'wslr-case-1',[function(p){return p<0.45?0:1;},2]);
 
 /* ── WSLR Case 2: Figma toolbar (3360x2100)
    blue: x=58,y=0 to x=3275,y=1922  → 0.0173,0.0000,0.9747,0.9152
@@ -1869,7 +1880,7 @@ registerCaseAnno('img-wslrc2','cvs-wslrc2',[
     drawYellowBoxFaded(ctx,yx,yy,yw,yh,0.5,rr);
     drawTarget(ctx,0.7635*W,0.0226*H,t);
   }
-],[250,200],'wslr-case-2',[function(p){return p<0.45?0:1;},2]);
+],[1500,1200],'wslr-case-2',[function(p){return p<0.45?0:1;},2]);
 
 /* ── WSLR Case 3: Calendar event popup (1920x1080)
    blue: x=1193,y=56 to x=1810,y=1067  → 0.6214,0.0519,0.3214,0.9361
@@ -1898,7 +1909,7 @@ registerCaseAnno('img-wslrc3','cvs-wslrc3',[
     drawYellowBoxFaded(ctx,yx,yy,yw,yh,0.5,rr);
     drawTarget(ctx,0.8839*W,0.2190*H,t);
   }
-],[250,200],'wslr-case-3',[function(p){return p<0.45?0:1;},2]);
+],[1500,1200],'wslr-case-3',[function(p){return p<0.45?0:1;},2]);
 
 /* ── ELR Case 1: Calendar app (2880x1800)
    yellow: x=1644,y=77 to x=2878,y=763  → 0.5708,0.0428,0.4285,0.3811
@@ -1913,7 +1924,7 @@ registerCaseAnno('img-elrc1','cvs-elrc1',[
     drawYellowBoxFaded(ctx,bx,by,bw,bh,0.5,rr);
     drawTarget(ctx,0.9224*W,0.0728*H,t);
   }
-],[200,200],'elr-case-1',[0,1]);
+],[1200,1200],'elr-case-1',[0,1]);
 
 /* ── ELR Case 2: London map (2880x1800)
    yellow: x=1223,y=764 to x=2054,y=1357  → 0.4247,0.4244,0.2885,0.3294
@@ -1928,7 +1939,7 @@ registerCaseAnno('img-elrc2','cvs-elrc2',[
     drawYellowBoxFaded(ctx,bx,by,bw,bh,0.5,rr);
     drawTarget(ctx,0.5727*W,0.5847*H,t);
   }
-],[200,200],'elr-case-2',[0,1]);
+],[1200,1200],'elr-case-2',[0,1]);
 
 })();
 </script>
